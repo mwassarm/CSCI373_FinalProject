@@ -5,12 +5,8 @@ import pybaseball
 from pybaseball import batting_stats
 pybaseball.cache.enable()
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression, Lasso, Ridge
-from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.metrics import mean_squared_error
-from sklearn.feature_selection import SequentialFeatureSelector
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import MinMaxScaler
 
