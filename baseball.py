@@ -1,3 +1,4 @@
+import sys 
 import pandas as pd
 import numpy as np
 import pybaseball
@@ -41,44 +42,57 @@ def load():
     return batting
 
 def split(batting):
-    X = batting.drop(['Name', 'Next_WAR'], axis=1)
-    y = batting['Next_WAR']
+    #adjust the dataset to split by season
     bat_copy=batting.copy()
     bat_copy2=batting.copy()
-    X_train1, X_test1, y_train1, y_test1 = train_test_split(X, y, test_size=0.75, random_state=12345)
     batting.sort_values("Season")
     X_train_temp=bat_copy[bat_copy["Season"]<2023]
     X_train_temp=X_train_temp[X_train_temp["PA"]>300]
+    #split dataset to get training X and y
     X_train_names = X_train_temp.dropna()
     X_train=X_train_names.drop(['Name','Next_WAR'],axis=1)
     y_train=X_train_names['Next_WAR']
+    #do the same as above for the test sets.
     X_test_temp=bat_copy2[bat_copy2["Season"]>2022]
-    #X_test_temp=X_test_temp[X_test_temp["PA"]>300]
+    X_test_temp=X_test_temp[X_test_temp["PA"]>300]
     players_2023=X_test_temp.drop(['Next_WAR'],axis=1)
     X_test=players_2023.drop(['Name'],axis=1)
     y_test=X_test_temp['Next_WAR']
     return X_train, X_test, y_train, y_test, players_2023
 
-def train_pred(X_train, X_test, y_train, y_test, players):
+def train_pred(X_train, X_test, y_train, y_test, players, increase, age, war):
+    #create and train the lasso model using our determinded best alpha
     lasso = Lasso(alpha=0.1)
     lasso.fit(X_train, y_train)
+    #make predictions for 2024 based on the 2023 stats
     y_pred = lasso.predict(X_test)
+    #add the predictions to the 2023 dataset along with the improvement or regression in WAR
     players['Prediction'] = y_pred.tolist()
     diff=np.subtract(y_pred,players['WAR'])
     players['Increase'] = diff.tolist()
-    test=players.copy()
-    test=test[test["Increase"]>1.25]
-    test=test[test["Age"]<27]
-    #test=test[test["WAR"]<3]
-    test.sort_values("Increase")
-    return test
+    #find our breakout players
+    breakouts=players.copy()
+    breakouts=breakouts[breakouts["Increase"]>increase]
+    breakouts=breakouts[breakouts["Age"]<age]
+    breakouts=breakouts[breakouts["WAR"]<war]
+    breakouts.sort_values("Increase")
+    return breakouts
     
 def main():
+    try:
+        increase=float(sys.argv[1])
+        age=float(sys.argv[2])
+        war=float(sys.argv[3])
+    except:
+        increase=1.25
+        age=27
+        war=3
     dataset = load()
     X_train, X_test, y_train, y_test, players_23 = split(dataset)
-    out = train_pred(X_train, X_test, y_train, y_test, players_23)
+    out = train_pred(X_train, X_test, y_train, y_test, players_23, increase, age, war)
     
     out1 = out.copy()
+    out1.sort_values("Increase")
     out1 = out.loc[:, out.columns.intersection(["Season","Name","Age", "WAR", "Next_WAR", "Prediction", "Increase"])]
 
     print(out1)
